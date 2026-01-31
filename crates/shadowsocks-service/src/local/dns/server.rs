@@ -619,7 +619,9 @@ fn should_forward_by_query(context: &ServiceContext, balancer: &PingBalancer, qu
             Some(should_forward_by_ptr_name(acl, query.name()))
         } else {
             let result = check_name_in_proxy_list(acl, query.name());
-            if result.is_none() && acl.is_ip_empty() && acl.is_host_empty() {
+            //if result.is_none() && acl.is_ip_empty() && acl.is_host_empty() {
+            // just choose the default behavior if it hits nothing.
+            if result.is_none() {
                 Some(acl.is_default_in_proxy_list())
             } else {
                 result
