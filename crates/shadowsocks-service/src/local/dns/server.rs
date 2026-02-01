@@ -903,9 +903,23 @@ impl DnsClient {
                 };
                 let udp_fut = async {
                     let server = self.balancer.best_udp_server();
-                    self.client_cache
-                        .lookup_remote(&self.context, server.server_config(), remote_addr, message, true)
-                        .await
+
+                    // Workaround: What if best_udp_server() returns a dummy server (the first one by default, as seen in find_best_idx())?
+                    // No need to give it a try if no UDP server is available.
+                    // A common case for UDP-to-TCP DNS relay via a TCP-only server.
+                    let svr_cfg = server.server_config();
+                    match svr_cfg.mode(){
+                        Mode::TcpOnly => {
+                            use hickory_resolver::proto::{ProtoError, ProtoErrorKind};
+                            Err(ProtoErrorKind::NoConnections.into())
+                        }
+                        _ => self.client_cache
+                                 .lookup_remote(&self.context, server.server_config(), remote_addr, message, true)
+                                 .await
+                    }
+                    //self.client_cache
+                    //    .lookup_remote(&self.context, server.server_config(), remote_addr, message, true)
+                    //    .await
                 };
 
                 tokio::pin!(tcp_fut);
