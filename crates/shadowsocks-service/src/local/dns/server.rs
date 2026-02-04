@@ -908,9 +908,9 @@ impl DnsClient {
                     // No need to give it a try if no UDP server is available.
                     // A common case for UDP-to-TCP DNS relay via a TCP-only server.
                     let svr_cfg = server.server_config();
-                    match svr_cfg.mode(){
+                    match svr_cfg.mode() {
                         Mode::TcpOnly => {
-                            use hickory_resolver::proto::{ProtoError, ProtoErrorKind};
+                            use hickory_resolver::proto::ProtoErrorKind;
                             Err(ProtoErrorKind::NoConnections.into())
                         }
                         _ => self.client_cache

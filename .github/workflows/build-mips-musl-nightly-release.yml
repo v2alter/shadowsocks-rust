@@ -1,0 +1,55 @@
+name: Build Mips-musl Nightly Releases
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-mips-musl-nightly-release:
+    runs-on: ubuntu-24.04
+    env:
+      RUST_BACKTRACE: full
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - mips-unknown-linux-musl
+          - mipsel-unknown-linux-musl
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: |
+          bash <(curl --proto '=https' --tlsv1.2 -sS ${{ secrets.rustup }}) ${{ matrix.target }}
+
+      - name: Install upx
+        run: |
+          wget https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz
+          tar Jxf upx-4.2.4-amd64_linux.tar.xz
+          sudo \cp -a upx-4.2.4-amd64_linux/upx /usr/bin/upx
+          rm -rf upx-4.2.4-amd64_linux*
+
+      - name: Build ${{ matrix.target }}
+        timeout-minutes: 120
+        run: |
+          cd ..
+          [ "${{ matrix.target }}" = "mips-unknown-linux-musl" ] && target=mips || target=mipsel
+          export $(echo "CARGO_TARGET_$(echo "$target" | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_LINKER"="$target-openwrt-linux-musl-gcc")
+          CARGO_BUILD_TARGET=${{ matrix.target }} \
+          CARGO_HOME=install \
+          RUSTFLAGS="-Ctarget-feature=-crt-static -lssp_nonshared -Clink-arg=-fuse-ld=bfd" \
+          TARGET_CC=$target-openwrt-linux-musl-gcc \
+          cargo install --profile release --features "full" --path "shadowsocks-rust"
+          upx -9 install/bin/*
+          tar -Jcf shadowsocks-rust-${{ matrix.target }}.tar.xz -C install/bin .
+          sha256sum shadowsocks-rust-${{ matrix.target }}.tar.xz > shadowsocks-rust-${{ matrix.target }}.tar.xz.sha256
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: shadowsocks-rust-${{ matrix.target }}
+          path: shadowsocks-rust-${{ matrix.target }}.tar.xz
