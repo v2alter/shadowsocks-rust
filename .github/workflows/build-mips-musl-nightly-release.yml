@@ -60,4 +60,4 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: shadowsocks-rust-${{ github.ref_name }}-${{ env.commit_id }}-${{ matrix.target }}
-          path: shadowsocks-rust-${{ github.ref_name }}-${{ env.commit_id }}-${{ matrix.target }}.tar.xz
+          path: ../shadowsocks-rust-${{ github.ref_name }}-${{ env.commit_id }}-${{ matrix.target }}.tar.xz
