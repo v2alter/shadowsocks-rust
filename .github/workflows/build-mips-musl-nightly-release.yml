@@ -16,21 +16,22 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - mips-unknown-linux-musl
           - mipsel-unknown-linux-musl
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout the code
+        uses: actions/checkout@v6
 
       - name: Install Rust
         run: |
-          bash <(curl --proto '=https' --tlsv1.2 -sS ${{ secrets.rustup }}) ${{ matrix.target }}
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+          bash <(curl --proto '=https' --tlsv1.2 -sS ${{ secrets.RUSTUP }})
 
       - name: Install upx
         run: |
           wget https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz
           tar Jxf upx-4.2.4-amd64_linux.tar.xz
-          sudo \cp -a upx-4.2.4-amd64_linux/upx /usr/bin/upx
+          sudo install -m 755 upx-4.2.4-amd64_linux/upx /usr/bin/upx
           rm -rf upx-4.2.4-amd64_linux*
 
       - name: Build ${{ matrix.target }}
@@ -43,13 +44,18 @@ jobs:
           CARGO_HOME=install \
           RUSTFLAGS="-Ctarget-feature=-crt-static -lssp_nonshared -Clink-arg=-fuse-ld=bfd" \
           TARGET_CC=$target-openwrt-linux-musl-gcc \
-          cargo install --profile release --features "full" --path "shadowsocks-rust"
+          cargo +nightly install \
+            -Z build-std=core,alloc,std,panic_abort \
+            --target mipsel-unknown-linux-musl \
+            --features "full" \
+            --profile release \
+            --path "shadowsocks-rust"
+        
           upx -9 install/bin/*
-          tar -Jcf shadowsocks-rust-${{ matrix.target }}.tar.xz -C install/bin .
-          sha256sum shadowsocks-rust-${{ matrix.target }}.tar.xz > shadowsocks-rust-${{ matrix.target }}.tar.xz.sha256
+          tar -Jcf shadowsocks-rust-${{ github.ref_name }}-$(echo ${{ github.sha }} | cut -c1-7)-${{ matrix.target }}.tar.xz -C install/bin .
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: shadowsocks-rust-${{ matrix.target }}
-          path: shadowsocks-rust-${{ matrix.target }}.tar.xz
+          name: shadowsocks-rust-${{ github.ref_name }}-$(echo ${{ github.sha }} | cut -c1-7)-${{ matrix.target }}
+          path: shadowsocks-rust-${{ github.ref_name }}-$(echo ${{ github.sha }} | cut -c1-7)-${{ matrix.target }}.tar.xz
