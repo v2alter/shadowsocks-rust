@@ -50,12 +50,14 @@ jobs:
             --features "full" \
             --profile release \
             --path "shadowsocks-rust"
-        
+
+          commit_id=$(echo ${{ github.sha }} | cut -c1-7)
+          echo commit_id="$commit_id" >> "$GITHUB_ENV"
           upx -9 install/bin/*
-          tar -Jcf shadowsocks-rust-${{ github.ref_name }}-$(echo ${{ github.sha }} | cut -c1-7)-${{ matrix.target }}.tar.xz -C install/bin .
+          tar -Jcf shadowsocks-rust-${{ github.ref_name }}-$commit_id-${{ matrix.target }}.tar.xz -C install/bin .
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: shadowsocks-rust-${{ github.ref_name }}-$(echo ${{ github.sha }} | cut -c1-7)-${{ matrix.target }}
-          path: shadowsocks-rust-${{ github.ref_name }}-$(echo ${{ github.sha }} | cut -c1-7)-${{ matrix.target }}.tar.xz
+          name: shadowsocks-rust-${{ github.ref_name }}-${{ env.commit_id }}-${{ matrix.target }}
+          path: shadowsocks-rust-${{ github.ref_name }}-${{ env.commit_id }}-${{ matrix.target }}.tar.xz
